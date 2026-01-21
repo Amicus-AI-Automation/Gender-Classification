@@ -1,0 +1,6 @@
+Name,Model_Prediction,Human_Verdict,Confidence
+swapnil,male,female,0.9994851322938966
+Ravi,Common,male,0.8078978592851023
+Nandini,female,female,0.9212753460963437
+Payal,female,female,0.9265184900710225
+Sonal,male,female,0.9957554592744196
