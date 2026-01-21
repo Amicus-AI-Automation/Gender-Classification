@@ -1,6 +1,14 @@
 Name,Model_Prediction,Human_Verdict,Confidence
-swapnil,male,female,0.9994851322938966
+swapnil,male,common,0.9994851322938966
 Ravi,Common,male,0.8078978592851023
 Nandini,female,female,0.9212753460963437
 Payal,female,female,0.9265184900710225
 Sonal,male,female,0.9957554592744196
+kiran,Common,common,0.8388292744335734
+suhana,Common,female,0.8292942098819277
+Lucky,female,common,0.9450160918454896
+surbhi,male,female,0.9990642961902406
+sonal,male,female,0.9950179748425304
+ali,female,male,0.946195826120391
+alia,female,female,0.9124585746049997
+juspreet,Common,female,0.6869017220662444

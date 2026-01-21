@@ -4,20 +4,14 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# ======================================================
 # Base directory (works in Streamlit + Python)
-# ======================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ======================================================
 # Load model and vectorizer
-# ======================================================
 final_classifier = joblib.load(os.path.join(BASE_DIR, "model/gender_model.joblib"))
 final_vectorizer = joblib.load(os.path.join(BASE_DIR, "model/vectorizer.joblib"))
 
-# ======================================================
 # Feature extraction
-# ======================================================
 def gender_features(name):
     name = name.lower()
     features = {}
@@ -36,9 +30,7 @@ def gender_features(name):
 
     return features
 
-# ======================================================
 # Prediction with "Common" logic
-# ======================================================
 def predict_gender(name, threshold=0.85, margin=0.65):
     features = gender_features(name)
     vec = final_vectorizer.transform([features])
@@ -57,9 +49,7 @@ def predict_gender(name, threshold=0.85, margin=0.65):
 
     return top_label, float(top_prob), prob_dict
 
-# ======================================================
 # Store feedback
-# ======================================================
 def store_feedback(name, model_prediction, human_verdict, confidence):
     file_path = os.path.join(BASE_DIR, "feedback-identification.csv")
 
@@ -78,10 +68,8 @@ def store_feedback(name, model_prediction, human_verdict, confidence):
     else:
         row.to_csv(file_path, index=False)
 
-# ======================================================
 # Streamlit UI
-# ======================================================
-st.title("🧠 Gender Identification – Human Feedback System")
+st.title("Gender Identification – Human Feedback System")
 
 name = st.text_input("Enter a name")
 
@@ -100,17 +88,17 @@ if st.button("Predict"):
             "probs": probs
         }
 
-# ---------------- Display Prediction ----------------
+#Display Prediction 
 if "result" in st.session_state:
     result = st.session_state["result"]
 
-    st.subheader("🔍 Model Prediction")
+    st.subheader("Model Prediction")
     st.write(f"**Name:** {result['name']}")
     st.write(f"**Prediction:** {result['prediction']}")
     st.write(f"**Confidence:** {result['confidence']:.2f}")
     st.json({k: round(v, 3) for k, v in result["probs"].items()})
 
-    st.subheader("👨‍⚕️ Human Expert Verdict")
+    st.subheader(" Human Expert Verdict")
 
     verdict = st.radio(
         "Select correct classification:",
@@ -119,7 +107,7 @@ if "result" in st.session_state:
         horizontal=True
     )
 
-    # ---------------- Save Feedback ----------------
+    # Save Feedback 
     if st.button("Save Feedback"):
         store_feedback(
             name=result["name"],
@@ -128,13 +116,13 @@ if "result" in st.session_state:
             confidence=result["confidence"]
         )
 
-        st.success("✅ Feedback saved successfully!")
+        st.success("Feedback saved successfully!")
 
         # Clear session state so next prediction is clean
         del st.session_state["result"]
 
-# ---------------- Optional: View feedback ----------------
-if st.checkbox("📄 Show stored feedback"):
+# Optional: View feedback
+if st.checkbox("Show stored feedback"):
     feedback_file = os.path.join(BASE_DIR, "feedback-identification.csv")
     if os.path.exists(feedback_file):
         st.dataframe(pd.read_csv(feedback_file))
