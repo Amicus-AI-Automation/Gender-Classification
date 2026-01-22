@@ -8,7 +8,7 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Load model and vectorizer
-final_classifier = joblib.load(os.path.join(BASE_DIR, "model/gender_model.joblib"))
+final_classifier = joblib.load(os.path.join(BASE_DIR, "model/gender_model_v2.joblib"))
 final_vectorizer = joblib.load(os.path.join(BASE_DIR, "model/vectorizer.joblib"))
 
 # Feature extraction
