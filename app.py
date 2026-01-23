@@ -2,14 +2,16 @@ import streamlit as st
 import joblib
 import pandas as pd
 import os
-from datetime import datetime
 
-# Base directory (works in Streamlit + Python)
+# Base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Load model and vectorizer
 final_classifier = joblib.load(os.path.join(BASE_DIR, "model/gender_model_v2.joblib"))
 final_vectorizer = joblib.load(os.path.join(BASE_DIR, "model/vectorizer.joblib"))
+
+FEEDBACK_PATH = os.path.join(BASE_DIR, "feedback-identification.csv")
+VALID_LABELS = {"male", "female", "common"}
 
 # Feature extraction
 def gender_features(name):
@@ -30,8 +32,29 @@ def gender_features(name):
 
     return features
 
-# Prediction with "Common" logic
-def predict_gender(name, threshold=0.85, margin=0.65):
+
+# Feedback override
+def get_feedback_override(name):
+    if not os.path.exists(FEEDBACK_PATH):
+        return None
+
+    df = pd.read_csv(FEEDBACK_PATH)
+    df = df[df["Human_Verdict"].isin(VALID_LABELS)]
+
+    match = df[df["Name"].str.lower() == name.lower()]
+    if not match.empty:
+        return match.iloc[-1]["Human_Verdict"]
+
+    return None
+
+
+# Prediction
+def predict_gender(name, threshold=0.80, margin=0.65):
+
+    feedback_verdict = get_feedback_override(name)
+    if feedback_verdict is not None:
+        return feedback_verdict, 1.0
+
     features = gender_features(name)
     vec = final_vectorizer.transform([features])
 
@@ -45,86 +68,127 @@ def predict_gender(name, threshold=0.85, margin=0.65):
     second_prob = sorted_probs[1][1]
 
     if top_prob < threshold or (top_prob - second_prob) < margin:
-        return "Common", float(top_prob), prob_dict
+        return "common", float(top_prob)
 
-    return top_label, float(top_prob), prob_dict
+    return top_label, float(top_prob)
 
-# Store feedback
-def store_feedback(name, model_prediction, human_verdict, confidence):
-    file_path = os.path.join(BASE_DIR, "feedback-identification.csv")
 
-    row = pd.DataFrame(
-        [[name, model_prediction, human_verdict, confidence]],
-        columns=[
-            "Name",
-            "Model_Prediction",
-            "Human_Verdict",
-            "Confidence"
-        ]
-    )
+# Store feedback (same-row update)
+def store_feedback(name, model_prediction, human_verdict, confidence, thumb=None):
 
-    if os.path.exists(file_path):
-        row.to_csv(file_path, mode="a", header=False, index=False)
+    columns = [
+        "Name", "Model_Prediction", "Human_Verdict", "Confidence",
+        "male", "female", "common"
+    ]
+
+    if os.path.exists(FEEDBACK_PATH):
+        df = pd.read_csv(FEEDBACK_PATH)
     else:
-        row.to_csv(file_path, index=False)
+        df = pd.DataFrame(columns=columns)
 
-# Streamlit UI
+    match_idx = df[df["Name"].str.lower() == name.lower()].index
+
+    if len(match_idx) > 0:
+        idx = match_idx[-1]
+
+        if thumb == "up":
+            df.at[idx, model_prediction] += 1
+        elif thumb == "down":
+            df.at[idx, model_prediction] -= 1
+
+        if human_verdict in VALID_LABELS:
+            df.at[idx, "Human_Verdict"] = human_verdict
+
+        df.at[idx, "Model_Prediction"] = model_prediction
+        df.at[idx, "Confidence"] = confidence
+
+    else:
+        male = female = common = 0
+
+        if thumb == "up":
+            locals()[model_prediction] = 1
+        elif thumb == "down":
+            locals()[model_prediction] = -1
+
+        df = pd.concat([
+            df,
+            pd.DataFrame([[ 
+                name,
+                model_prediction,
+                human_verdict if human_verdict in VALID_LABELS else "",
+                confidence,
+                male, female, common
+            ]], columns=columns)
+        ], ignore_index=True)
+
+    df.to_csv(FEEDBACK_PATH, index=False)
+
+
+# ---------------- STREAMLIT APP ----------------
+
 st.title("Gender Identification – Human Feedback System")
 
 name = st.text_input("Enter a name")
 
-# ---------------- Predict ----------------
-if st.button("Predict"):
-    if name.strip() == "":
-        st.warning("Please enter a valid name.")
-    else:
-        prediction, confidence, probs = predict_gender(name)
+# Init session result
+if "result" not in st.session_state:
+    st.session_state.result = None
 
-        # Save result in session state
-        st.session_state["result"] = {
+# Predict
+if st.button("Predict"):
+    if name.strip():
+        pred, conf = predict_gender(name)
+        st.session_state.result = {
             "name": name,
-            "prediction": prediction,
-            "confidence": confidence,
-            "probs": probs
+            "prediction": pred,
+            "confidence": conf
         }
 
-#Display Prediction 
-if "result" in st.session_state:
-    result = st.session_state["result"]
+# Display Prediction
+if st.session_state.result:
+    r = st.session_state.result
 
     st.subheader("Model Prediction")
-    st.write(f"**Name:** {result['name']}")
-    st.write(f"**Prediction:** {result['prediction']}")
-    st.write(f"**Confidence:** {result['confidence']:.2f}")
-    st.json({k: round(v, 3) for k, v in result["probs"].items()})
+    st.write(f"**Name:** {r['name']}")
+    st.write(f"**Prediction:** {r['prediction']}")
+    st.write(f"**Confidence:** {r['confidence']:.2f}")
 
-    st.subheader(" Human Expert Verdict")
+    col1, col2 = st.columns(2)
 
+    with col1:
+        if st.button("👍 Thumbs Up"):
+            store_feedback(
+                r["name"], r["prediction"], r["prediction"],
+                r["confidence"], thumb="up"
+            )
+            st.success("Thumbs up recorded")
+
+    with col2:
+        if st.button("👎 Thumbs Down"):
+            store_feedback(
+                r["name"], r["prediction"], "",
+                r["confidence"], thumb="down"
+            )
+            st.warning("Thumbs down recorded")
+
+    st.subheader("Human Expert Verdict")
     verdict = st.radio(
         "Select correct classification:",
         ["male", "female", "common"],
-        key="verdict_radio",
-        horizontal=True
+        horizontal=True,
+        key="expert_verdict"
     )
 
-    # Save Feedback 
-    if st.button("Save Feedback"):
+    if st.button("Save Expert Feedback"):
         store_feedback(
-            name=result["name"],
-            model_prediction=result["prediction"],
-            human_verdict=verdict,
-            confidence=result["confidence"]
+            r["name"], r["prediction"], verdict,
+            r["confidence"]
         )
+        st.success("Expert feedback saved")
 
-        st.success("Feedback saved successfully!")
-
-        # Clear session state so next prediction is clean
-        del st.session_state["result"]
-
-# Optional: View feedback
+# View feedback
 if st.checkbox("Show stored feedback"):
-    feedback_file = os.path.join(BASE_DIR, "feedback-identification.csv")
-    if os.path.exists(feedback_file):
-        st.dataframe(pd.read_csv(feedback_file))
+    if os.path.exists(FEEDBACK_PATH):
+        st.dataframe(pd.read_csv(FEEDBACK_PATH))
     else:
         st.info("No feedback collected yet.")
