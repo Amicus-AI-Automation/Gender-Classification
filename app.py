@@ -92,9 +92,7 @@ def store_feedback(name, model_prediction, human_verdict, confidence, thumb=None
         idx = match_idx[-1]
 
         if thumb == "up":
-            df.at[idx, model_prediction] += 1
-        elif thumb == "down":
-            df.at[idx, model_prediction] -= 1
+            df.at[idx, model_prediction] += 1  # ✅ increment only
 
         if human_verdict in VALID_LABELS:
             df.at[idx, "Human_Verdict"] = human_verdict
@@ -106,13 +104,11 @@ def store_feedback(name, model_prediction, human_verdict, confidence, thumb=None
         male = female = common = 0
 
         if thumb == "up":
-            locals()[model_prediction] = 1
-        elif thumb == "down":
-            locals()[model_prediction] = -1
+            locals()[model_prediction] = 1  # ✅ increment only
 
         df = pd.concat([
             df,
-            pd.DataFrame([[ 
+            pd.DataFrame([[
                 name,
                 model_prediction,
                 human_verdict if human_verdict in VALID_LABELS else "",
@@ -130,9 +126,11 @@ st.title("Gender Identification – Human Feedback System")
 
 name = st.text_input("Enter a name")
 
-# Init session result
+# Session state
 if "result" not in st.session_state:
     st.session_state.result = None
+if "show_expert" not in st.session_state:
+    st.session_state.show_expert = False
 
 # Predict
 if st.button("Predict"):
@@ -143,6 +141,7 @@ if st.button("Predict"):
             "prediction": pred,
             "confidence": conf
         }
+        st.session_state.show_expert = False
 
 # Display Prediction
 if st.session_state.result:
@@ -167,24 +166,28 @@ if st.session_state.result:
         if st.button("👎 Thumbs Down"):
             store_feedback(
                 r["name"], r["prediction"], "",
-                r["confidence"], thumb="down"
+                r["confidence"]
             )
-            st.warning("Thumbs down recorded")
+            st.session_state.show_expert = True
+            st.warning("Please provide correct classification")
 
-    st.subheader("Human Expert Verdict")
-    verdict = st.radio(
-        "Select correct classification:",
-        ["male", "female", "common"],
-        horizontal=True,
-        key="expert_verdict"
-    )
-
-    if st.button("Save Expert Feedback"):
-        store_feedback(
-            r["name"], r["prediction"], verdict,
-            r["confidence"]
+    # Show expert verdict ONLY after thumbs down
+    if st.session_state.show_expert:
+        st.subheader("Human Expert Verdict")
+        verdict = st.radio(
+            "Select correct classification:",
+            ["male", "female", "common"],
+            horizontal=True,
+            key="expert_verdict"
         )
-        st.success("Expert feedback saved")
+
+        if st.button("Save Expert Feedback"):
+            store_feedback(
+                r["name"], r["prediction"], verdict,
+                r["confidence"]
+            )
+            st.success("Expert feedback saved")
+            st.session_state.show_expert = False
 
 # View feedback
 if st.checkbox("Show stored feedback"):
