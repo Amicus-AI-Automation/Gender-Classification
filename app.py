@@ -92,7 +92,7 @@ def store_feedback(name, model_prediction, human_verdict, confidence, thumb=None
         idx = match_idx[-1]
 
         if thumb == "up":
-            df.at[idx, model_prediction] += 1  # ✅ increment only
+            df.at[idx, model_prediction] += 1  # increment only
 
         if human_verdict in VALID_LABELS:
             df.at[idx, "Human_Verdict"] = human_verdict
@@ -104,7 +104,7 @@ def store_feedback(name, model_prediction, human_verdict, confidence, thumb=None
         male = female = common = 0
 
         if thumb == "up":
-            locals()[model_prediction] = 1  # ✅ increment only
+            locals()[model_prediction] = 1  # increment only
 
         df = pd.concat([
             df,
