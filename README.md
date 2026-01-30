@@ -10,6 +10,7 @@ This project builds a **machine learning system to predict gender from names** u
 * Supports **confidence-based prediction**
 * Learns continuously from **human feedback**
 * Deployed using **Streamlit**
+*  **PROJECT DOCUMENTATION** - [Project Documentation](https://docs.google.com/document/d/1QpheJPl9DeU1rAPYxFk3jy5S-Id0kxBoWUhVyMelG78/edit?tab=t.0)
 
 
 ## Workflow
@@ -25,6 +26,7 @@ This project builds a **machine learning system to predict gender from names** u
 9. Apply confidence threshold → mark uncertain cases as `common`
 10. Collect human feedback (thumbs up/down + expert verdict)
 11. Incrementally retrain model using feedback (warm start)
+12. **FIGMA WORKFLOW** - [View Workflow Diagram](https://www.figma.com/board/G73G37tL3yiSzYNq2654x6/Gender-Classification-System?node-id=0-1&p=f&t=8lH7eAgOApmCUraj-0)
 
 ## Project Structure
 ```
