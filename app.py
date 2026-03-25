@@ -10,7 +10,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 final_classifier = joblib.load(os.path.join(BASE_DIR, "model/gender_model_v2.joblib"))
 final_vectorizer = joblib.load(os.path.join(BASE_DIR, "model/vectorizer.joblib"))
 
-FEEDBACK_PATH = os.path.join(BASE_DIR, "feedback-identification.csv")
+FEEDBACK_PATH = os.path.join(BASE_DIR, "data/feedback-identification.csv")
 VALID_LABELS = {"male", "female", "common"}
 
 # Feature extraction
